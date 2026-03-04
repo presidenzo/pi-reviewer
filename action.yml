@@ -1,0 +1,60 @@
+name: "pi-reviewer"
+description: "AI-powered PR reviewer using Claude agent"
+author: "zeflq"
+
+inputs:
+  github-token:
+    description: "GitHub token to post PR comments. Use ${{ secrets.GITHUB_TOKEN }}"
+    required: true
+
+  anthropic-api-key:
+    description: "Anthropic API key for Claude models"
+    required: false
+
+  copilot-api-key:
+    description: "GitHub Copilot API key"
+    required: false
+
+  model:
+    description: "Model to use in provider/modelId format (e.g. anthropic/claude-opus-4-6)"
+    required: false
+
+  post-comment:
+    description: "Post review as a GitHub PR comment"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate API key
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.anthropic-api-key }}" ] && [ -z "${{ inputs.copilot-api-key }}" ]; then
+          echo "Error: at least one of anthropic-api-key or copilot-api-key must be provided"
+          exit 1
+        fi
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+      working-directory: ${{ github.action_path }}
+
+    - name: Run review
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        POST_COMMENT: ${{ inputs.post-comment }}
+        PI_REVIEWER_MODEL: ${{ inputs.model }}
+      run: node ${{ github.action_path }}/dist/src/action-entry.js
+
+branding:
+  icon: "eye"
+  color: "blue"
