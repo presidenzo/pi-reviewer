@@ -42,7 +42,9 @@ export async function review(options) {
         branch: options.branch,
         cwd,
     });
+    console.log(`[pi-reviewer] diff resolved — source: ${source}, size: ${diff.length} chars`);
     const context = await loadContext({ cwd });
+    console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
     const systemPrompt = buildSystemPrompt(context);
     const userPrompt = buildUserPrompt(diff);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
@@ -62,6 +64,7 @@ export async function review(options) {
         model = getModel(provider, modelId);
     }
     const resolvedModel = model ?? getModel("anthropic", "claude-opus-4-6");
+    console.log(`[pi-reviewer] running agent (model: ${resolvedModel.api})`);
     const agent = new Agent({
         initialState: {
             systemPrompt,
@@ -81,16 +84,26 @@ export async function review(options) {
     let unsubscribe;
     try {
         let finalResponse = "";
-        const ended = new Promise((resolve) => {
+        const ended = new Promise((resolve, reject) => {
             unsubscribe = agent.subscribe((event) => {
                 if (!event || typeof event !== "object")
                     return;
                 if (event.type !== "agent_end")
                     return;
-                const messages = event.messages;
-                console.log("[pi-reviewer] agent_end messages:", JSON.stringify(messages));
-                finalResponse = extractAssistantText(messages);
-                console.log("[pi-reviewer] extracted response:", JSON.stringify(finalResponse));
+                const ev = event;
+                if (ev.stopReason === "error") {
+                    const msg = ev.errorMessage ?? "Agent ended with an error (no message)";
+                    console.error(`[pi-reviewer] agent error: ${msg}`);
+                    reject(new Error(`Agent failed: ${msg}`));
+                    return;
+                }
+                finalResponse = extractAssistantText(ev.messages);
+                if (!finalResponse.trim()) {
+                    console.error("[pi-reviewer] agent returned an empty response");
+                    reject(new Error("Agent returned an empty response"));
+                    return;
+                }
+                console.log(`[pi-reviewer] agent completed — response: ${finalResponse.length} chars`);
                 resolve();
             });
         });

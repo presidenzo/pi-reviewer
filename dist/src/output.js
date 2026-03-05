@@ -29,7 +29,19 @@ export function parseAgentResponse(text) {
     }
     return { summary: text, comments: [] };
 }
-function formatReviewResult(result) {
+const ATTRIBUTION = "*Review by [pi-reviewer](https://github.com/zeflq/pi-reviewer)*";
+function formatForGitHub(result) {
+    const lines = ["## Pi Reviewer", "", result.summary];
+    if (result.comments.length > 0) {
+        lines.push("", "### Inline Comments");
+        for (const comment of result.comments) {
+            lines.push("", `**\`${comment.file}:${comment.line}\`** · ${comment.side}`, comment.body);
+        }
+    }
+    lines.push("", "---", ATTRIBUTION);
+    return lines.join("\n");
+}
+function formatForTerminal(result) {
     const lines = ["== Review Summary ==", result.summary];
     if (result.comments.length > 0) {
         lines.push("", "== Inline Comments ==");
@@ -45,7 +57,7 @@ function formatReviewResult(result) {
 export async function sendOutput(options) {
     const result = parseAgentResponse(options.content);
     if (options.target === "terminal") {
-        console.log(formatReviewResult(result));
+        console.log(formatForTerminal(result));
         return;
     }
     if (options.target === "comment") {
@@ -70,6 +82,7 @@ export async function sendOutput(options) {
         }));
         // Try PR Reviews API first (supports inline comments)
         if (inlineComments.length > 0 && options.commitId) {
+            console.log(`[pi-reviewer] posting review with ${inlineComments.length} inline comment(s)`);
             const reviewResponse = await fetch(`https://api.github.com/repos/${options.repo}/pulls/${options.prNumber}/reviews`, {
                 method: "POST",
                 headers,
@@ -80,27 +93,28 @@ export async function sendOutput(options) {
                     comments: inlineComments,
                 }),
             });
-            if (reviewResponse.ok)
+            if (reviewResponse.ok) {
+                console.log("[pi-reviewer] review posted with inline comments");
                 return;
-            console.warn("PR Reviews API failed — falling back to issue comment.");
+            }
+            const errBody = await reviewResponse.text().catch(() => "");
+            console.warn(`[pi-reviewer] inline comments rejected (${reviewResponse.status}) — posting summary only. Reason: ${errBody}`);
         }
         // Fallback: Issues Comments API (always works, no inline comments)
-        const commentBody = inlineComments.length > 0
-            ? `${result.summary}\n\n${formatReviewResult(result)}`
-            : result.summary;
         const issueResponse = await fetch(`https://api.github.com/repos/${options.repo}/issues/${options.prNumber}/comments`, {
             method: "POST",
             headers,
-            body: JSON.stringify({ body: commentBody }),
+            body: JSON.stringify({ body: formatForGitHub(result) }),
         });
         if (!issueResponse.ok) {
             const body = await issueResponse.text().catch(() => "(unreadable)");
             throw new Error(`Failed to post GitHub comment: ${issueResponse.status} ${issueResponse.statusText}\n${body}`);
         }
+        console.log("[pi-reviewer] review comment posted");
         return;
     }
     const cwd = options.cwd ?? process.cwd();
     const filePath = path.join(cwd, "pi-review.md");
-    await writeFile(filePath, formatReviewResult(result), "utf-8");
-    console.log("Review saved to pi-review.md");
+    await writeFile(filePath, formatForTerminal(result), "utf-8");
+    console.log(`[pi-reviewer] review saved to ${filePath}`);
 }

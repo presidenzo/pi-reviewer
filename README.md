@@ -50,15 +50,35 @@ Create `AGENTS.md` at the root of your project to give the reviewer context abou
 
 ## Bot identity
 
-PR comments appear under `github-actions[bot]` — the default GitHub Actions bot tied to `secrets.GITHUB_TOKEN`.
+By default, review comments appear under `github-actions[bot]` — the built-in GitHub Actions identity tied to `secrets.GITHUB_TOKEN`. No extra setup required.
 
-To use a custom bot name, create a GitHub App, generate a token for it, and pass it as `github-token` in your workflow:
+To post comments under a custom bot name, you need a **GitHub App**:
+
+1. Create a GitHub App at `github.com/settings/apps/new`
+   - Set **Pull requests** permission to **Write**
+   - Disable the webhook (not needed)
+2. Install the app on your repository
+3. Generate a **private key** and note the **App ID**
+4. Add two secrets to your repo:
+   - `BOT_APP_ID` — the App ID
+   - `BOT_PRIVATE_KEY` — the private key contents
+
+Then update your workflow to exchange the app credentials for a token before calling pi-reviewer:
 
 ```yaml
-- uses: zeflq/pi-reviewer@main
-  with:
-    github-token: ${{ secrets.MY_BOT_TOKEN }}
-    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+steps:
+  - uses: actions/checkout@v4
+
+  - uses: tibdex/github-app-token@v2
+    id: bot-token
+    with:
+      app_id: ${{ secrets.BOT_APP_ID }}
+      private_key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+  - uses: zeflq/pi-reviewer@main
+    with:
+      github-token: ${{ steps.bot-token.outputs.token }}
+      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-The comment will then appear under your GitHub App's name.
+The review comment will then appear under your GitHub App's name (e.g. `my-bot[bot]`).

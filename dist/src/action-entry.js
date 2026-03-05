@@ -18,8 +18,13 @@ async function getPrInfo() {
     }
 }
 const prInfo = await getPrInfo();
+if (!prInfo) {
+    console.error("[pi-reviewer] could not read PR info from GITHUB_EVENT_PATH — is this a pull_request event?");
+    process.exit(1);
+}
+console.log(`[pi-reviewer] starting review for PR #${prInfo.number} in ${process.env.GITHUB_REPOSITORY ?? "unknown repo"}`);
 await review({
-    pr: prInfo?.number,
-    commitId: prInfo?.headSha,
+    pr: prInfo.number,
+    commitId: prInfo.headSha,
     output: "comment",
 });

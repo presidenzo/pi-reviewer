@@ -62,8 +62,11 @@ export async function review(options: ReviewOptions): Promise<void> {
     branch: options.branch,
     cwd,
   });
+  console.log(`[pi-reviewer] diff resolved — source: ${source}, size: ${diff.length} chars`);
 
   const context = await loadContext({ cwd });
+  console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
+
   const systemPrompt = buildSystemPrompt(context);
   const userPrompt = buildUserPrompt(diff);
 
@@ -88,6 +91,7 @@ export async function review(options: ReviewOptions): Promise<void> {
   }
 
   const resolvedModel = model ?? getModel("anthropic", "claude-opus-4-6");
+  console.log(`[pi-reviewer] running agent (model: ${resolvedModel.api})`);
 
   const agent = new Agent({
     initialState: {
@@ -110,15 +114,29 @@ export async function review(options: ReviewOptions): Promise<void> {
   try {
     let finalResponse = "";
 
-    const ended = new Promise<void>((resolve) => {
+    const ended = new Promise<void>((resolve, reject) => {
       unsubscribe = agent.subscribe((event: unknown) => {
         if (!event || typeof event !== "object") return;
         if ((event as { type?: string }).type !== "agent_end") return;
 
-        const messages = (event as { messages?: unknown }).messages;
-        console.log("[pi-reviewer] agent_end messages:", JSON.stringify(messages));
-        finalResponse = extractAssistantText(messages);
-        console.log("[pi-reviewer] extracted response:", JSON.stringify(finalResponse));
+        const ev = event as { messages?: unknown; stopReason?: string; errorMessage?: string };
+
+        if (ev.stopReason === "error") {
+          const msg = ev.errorMessage ?? "Agent ended with an error (no message)";
+          console.error(`[pi-reviewer] agent error: ${msg}`);
+          reject(new Error(`Agent failed: ${msg}`));
+          return;
+        }
+
+        finalResponse = extractAssistantText(ev.messages);
+
+        if (!finalResponse.trim()) {
+          console.error("[pi-reviewer] agent returned an empty response");
+          reject(new Error("Agent returned an empty response"));
+          return;
+        }
+
+        console.log(`[pi-reviewer] agent completed — response: ${finalResponse.length} chars`);
         resolve();
       });
     });
