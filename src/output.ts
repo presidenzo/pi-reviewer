@@ -100,26 +100,33 @@ export async function sendOutput(options: OutputOptions): Promise<void> {
       throw new Error("Repository (owner/repo) is required to post a comment");
     }
 
-    const response = await fetch(
-      `https://api.github.com/repos/${options.repo}/pulls/${options.prNumber}/reviews`,
-      {
+    const reviewUrl = `https://api.github.com/repos/${options.repo}/pulls/${options.prNumber}/reviews`;
+    const headers = {
+      Authorization: `Bearer ${options.githubToken}`,
+      "Content-Type": "application/json",
+    };
+
+    const inlineComments = result.comments.map((comment) => ({
+      path: comment.file,
+      line: comment.line,
+      side: comment.side,
+      body: comment.body,
+    }));
+
+    let response = await fetch(reviewUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ body: result.summary, event: "COMMENT", comments: inlineComments }),
+    });
+
+    if (!response.ok && response.status === 422 && inlineComments.length > 0) {
+      console.warn("Inline comments rejected (422) — retrying without inline comments.");
+      response = await fetch(reviewUrl, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${options.githubToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          body: result.summary,
-          event: "COMMENT",
-          comments: result.comments.map((comment) => ({
-            path: comment.file,
-            line: comment.line,
-            side: comment.side,
-            body: comment.body,
-          })),
-        }),
-      }
-    );
+        headers,
+        body: JSON.stringify({ body: result.summary, event: "COMMENT", comments: [] }),
+      });
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to post GitHub comment: ${response.status} ${response.statusText}`);

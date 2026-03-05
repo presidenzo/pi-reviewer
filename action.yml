@@ -4,7 +4,7 @@ author: "zeflq"
 
 inputs:
   github-token:
-    description: "GitHub token to post PR comments. Use ${{ secrets.GITHUB_TOKEN }}"
+    description: "GitHub token to post PR comments."
     required: true
 
   anthropic-api-key:
