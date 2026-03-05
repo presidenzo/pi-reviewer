@@ -10,7 +10,11 @@ function ensureNonEmptyDiff(diff) {
 }
 function detectOriginBase(cwd) {
     try {
-        return run("git symbolic-ref refs/remotes/origin/HEAD --short", cwd).trim();
+        return execSync("git symbolic-ref refs/remotes/origin/HEAD --short", {
+            cwd,
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
     }
     catch {
         return "origin/main";

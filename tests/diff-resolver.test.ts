@@ -79,6 +79,7 @@ describe("resolveDiff", () => {
       {
         cwd: "/repo",
         encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
       }
     );
     expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
@@ -103,6 +104,7 @@ describe("resolveDiff", () => {
       {
         cwd: "/repo",
         encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
       }
     );
     expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
