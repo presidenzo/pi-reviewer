@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ReviewComment } from "./types";
 import { ParsedFile, SplitRow, UnifiedRow, buildSplitRows, buildUnifiedRows } from "./diff-parser";
 import { CommentCard } from "./CommentCard";
@@ -19,6 +19,7 @@ interface Props {
   onDecide: (idx: number, decision: string, discussText: string) => void;
   selected?: boolean;
   viewMode: "split" | "unified";
+  forceOpen?: boolean;
 }
 
 type PlacedComment = { comment: ReviewComment; idx: number; snapped: boolean };
@@ -109,7 +110,7 @@ function hl(content: string | undefined, lang: string | null): React.ReactNode {
   return <span dangerouslySetInnerHTML={{ __html: highlightLine(content, lang) }} />;
 }
 
-export function FileDiff({ file, comments: fc, decisions, onDecide, selected, viewMode }: Props) {
+export function FileDiff({ file, comments: fc, decisions, onDecide, selected, viewMode, forceOpen }: Props) {
   const allRows = useMemo(() => buildSplitRows(file), [file]);
   const allUnifiedRows = useMemo(() => buildUnifiedRows(file), [file]);
   const lang = useMemo(() => getLanguage(file.file), [file.file]);
@@ -119,6 +120,10 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
 
   const [collapsed, setCollapsed] = useState(isLarge);
   const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (forceOpen) setCollapsed(false);
+  }, [forceOpen]);
 
   const rows = showAll ? allRows : allRows.slice(0, TRUNCATE_THRESHOLD);
   const unifiedRows = showAll ? allUnifiedRows : allUnifiedRows.slice(0, TRUNCATE_THRESHOLD);

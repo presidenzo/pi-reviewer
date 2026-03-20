@@ -34,6 +34,7 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [openFiles, setOpenFiles] = useState<Record<string, boolean>>({});
 
   const toggleFolder = useCallback((folderPath: string) => {
     setCollapsedFolders((prev) => ({ ...prev, [folderPath]: !(prev[folderPath] ?? false) }));
@@ -62,7 +63,13 @@ export default function App() {
   function jumpToNextPending() {
     for (let i = 0; i < totalComments; i++) {
       if (!decisions[i]?.decision) {
-        document.getElementById(`cmt-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const targetFile = result.comments[i]?.file;
+        if (targetFile) {
+          setOpenFiles((prev) => ({ ...prev, [targetFile]: true }));
+        }
+        setTimeout(() => {
+          document.getElementById(`cmt-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 50);
         return;
       }
     }
@@ -139,6 +146,7 @@ export default function App() {
               decisions={decisions}
               onDecide={onDecide}
               selected={file.file === selectedFile}
+              forceOpen={openFiles[file.file] ?? false}
               viewMode={viewMode}
             />
           ))}
