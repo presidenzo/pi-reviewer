@@ -29,7 +29,7 @@ export default function App() {
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"split" | "unified">("split");
+  const [viewMode, setViewMode] = useState<"split" | "unified">(data.viewMode ?? "split");
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
@@ -44,6 +44,10 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme);
     fetch("/theme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme }) }).catch(() => {});
   }, [theme]);
+
+  useEffect(() => {
+    fetch("/viewmode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ viewMode }) }).catch(() => {});
+  }, [viewMode]);
 
   useEffect(() => {
     const iv = setInterval(() => { fetch("/ping").catch(() => {}); }, 2000);

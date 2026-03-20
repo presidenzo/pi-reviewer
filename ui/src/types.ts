@@ -23,4 +23,5 @@ export interface UIData {
   source?: string;
   ssh?: boolean;
   theme?: "dark" | "light";
+  viewMode?: "split" | "unified";
 }

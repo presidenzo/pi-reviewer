@@ -11,6 +11,7 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 interface PiReviewerConfig {
   theme?: "dark" | "light";
+  viewMode?: "split" | "unified";
 }
 
 function readConfig(): PiReviewerConfig {
@@ -30,6 +31,10 @@ function saveConfig(config: PiReviewerConfig): void {
 
 export function readTheme(): "dark" | "light" {
   return readConfig().theme ?? "dark";
+}
+
+export function readViewMode(): "split" | "unified" {
+  return readConfig().viewMode ?? "split";
 }
 
 export type ActionType = "send" | "save" | "save-and-send" | "closed";
@@ -55,7 +60,7 @@ export interface UIServerHandle {
 const HEARTBEAT_MS = 6000;
 
 export async function startUIServer(result: ReviewResult, diff: string, source?: string, ssh?: boolean): Promise<UIServerHandle> {
-  const html = buildHTML(result, diff, source, ssh, readTheme());
+  const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
 
   let resolveAction!: (a: UIAction) => void;
   const actionPromise = new Promise<UIAction>((r) => { resolveAction = r; });
@@ -99,6 +104,14 @@ export async function startUIServer(result: ReviewResult, diff: string, source?:
       try {
         const { theme } = JSON.parse(body) as { theme?: string };
         if (theme === "dark" || theme === "light") saveConfig({ ...readConfig(), theme });
+      } catch { /* ignore */ }
+      res.writeHead(204);
+      res.end();
+    } else if (req.method === "POST" && req.url === "/viewmode") {
+      const body = await readBody(req);
+      try {
+        const { viewMode } = JSON.parse(body) as { viewMode?: string };
+        if (viewMode === "split" || viewMode === "unified") saveConfig({ ...readConfig(), viewMode });
       } catch { /* ignore */ }
       res.writeHead(204);
       res.end();

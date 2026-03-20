@@ -24,10 +24,13 @@ function saveConfig(config) {
 export function readTheme() {
     return readConfig().theme ?? "dark";
 }
+export function readViewMode() {
+    return readConfig().viewMode ?? "split";
+}
 // Resolve if no ping received for this long — user closed the tab
 const HEARTBEAT_MS = 6000;
 export async function startUIServer(result, diff, source, ssh) {
-    const html = buildHTML(result, diff, source, ssh, readTheme());
+    const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
     let resolveAction;
     const actionPromise = new Promise((r) => { resolveAction = r; });
     let heartbeatTimer;
@@ -68,6 +71,17 @@ export async function startUIServer(result, diff, source, ssh) {
                 const { theme } = JSON.parse(body);
                 if (theme === "dark" || theme === "light")
                     saveConfig({ ...readConfig(), theme });
+            }
+            catch { /* ignore */ }
+            res.writeHead(204);
+            res.end();
+        }
+        else if (req.method === "POST" && req.url === "/viewmode") {
+            const body = await readBody(req);
+            try {
+                const { viewMode } = JSON.parse(body);
+                if (viewMode === "split" || viewMode === "unified")
+                    saveConfig({ ...readConfig(), viewMode });
             }
             catch { /* ignore */ }
             res.writeHead(204);
