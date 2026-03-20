@@ -245,7 +245,7 @@ Config file already created for theme persistence. Future settings to add:
 - [x] **Syntax highlighting** — colorize the diff by language instead of plain text
 - [x] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
 - [ ] **Click a line to add a note** — attach a personal annotation to any diff line, not just to agent-generated comments
-- [ ] **Submit review panel** — replace Save / Send / Save & Send buttons with a single "Submit review" button; click opens a panel with a global comment textarea and 3 radio options (Send / Save / Save & Send); submit triggers the selected action with the comment injected
+- [x] **Submit review panel** — replace Save / Send / Save & Send buttons with a single "Finish review" button; click opens a panel with a global comment textarea and 3 radio options (Send / Save / Save & Send); submit triggers the selected action with the comment injected
 - [ ] **Summary overview panel** — replace the inline summary dropdown with an ⓘ icon button; click opens a side panel (GitHub-style Overview) rendering the summary markdown; add a separator between the left icon cluster and the right action cluster in hdr2
 
 ### 10. Custom system prompt

@@ -71,7 +71,7 @@ export default function App() {
     setDecisions((prev) => ({ ...prev, [idx]: { decision, discussText } }));
   }, []);
 
-  function doAction(type: string) {
+  function doAction(type: string, globalComment: string) {
     const list = result.comments.map((_: ReviewComment, i: number) => {
       const d = decisions[i] || {};
       return { index: i, decision: d.decision || "reject", discussText: d.discussText || "" };
@@ -79,7 +79,7 @@ export default function App() {
     fetch("/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, decisions: list }),
+      body: JSON.stringify({ type, decisions: list, globalComment }),
     }).then(() => setSubmitted(true));
   }
 

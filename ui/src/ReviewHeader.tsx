@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { marked } from "marked";
+import { SubmitPanel } from "./SubmitPanel";
 
 interface ReviewHeaderProps {
   source: string;
@@ -14,7 +16,7 @@ interface ReviewHeaderProps {
   allDone: boolean;
   hasAccepted: boolean;
   onJumpToNext: () => void;
-  onAction: (type: string) => void;
+  onAction: (type: string, globalComment: string) => void;
   summary: string;
   viewMode: "split" | "unified";
   onViewModeToggle: () => void;
@@ -28,6 +30,8 @@ export function ReviewHeader({
   onJumpToNext, onAction, summary,
   viewMode, onViewModeToggle,
 }: ReviewHeaderProps) {
+  const [submitOpen, setSubmitOpen] = useState(false);
+
   return (
     <div id="sticky-top">
 
@@ -86,17 +90,14 @@ export function ReviewHeader({
         <button className="icon-btn" disabled={allDone} onClick={onJumpToNext} title="Jump to next undecided comment">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         </button>
-        <button className="action-btn" disabled={!allDone} onClick={() => onAction("save")} style={{ color: "#79c0ff" }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          <span>Save</span>
-        </button>
-        <button className="action-btn" disabled={!allDone || !hasAccepted} onClick={() => onAction("send")} style={{ color: "#3fb950" }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          <span>Send</span>
-        </button>
-        <button className="action-btn" disabled={!allDone || !hasAccepted} onClick={() => onAction("save-and-send")} style={{ color: "#3fb950" }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          <span>Save & Send</span>
+        <span id="hdr2-sep" />
+        <button
+          className="finish-btn"
+          disabled={!allDone}
+          onClick={() => setSubmitOpen(true)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Finish review
         </button>
       </div>
 
@@ -104,6 +105,14 @@ export function ReviewHeader({
         <div id="summary">
           <div className="md" dangerouslySetInnerHTML={{ __html: marked(summary) as string }} />
         </div>
+      )}
+
+      {submitOpen && (
+        <SubmitPanel
+          hasAccepted={hasAccepted}
+          onSubmit={(mode, comment) => { onAction(mode, comment); setSubmitOpen(false); }}
+          onClose={() => setSubmitOpen(false)}
+        />
       )}
 
     </div>

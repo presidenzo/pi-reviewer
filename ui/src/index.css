@@ -254,6 +254,31 @@ body {
   cursor: not-allowed;
 }
 
+.finish-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: #238636;
+  color: #fff;
+  border: 1px solid #2ea043;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.finish-btn:hover:not(:disabled) {
+  background: #2ea043;
+}
+
+.finish-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
 /* ── Summary ─────────────────────────────────────────────────────────────── */
 #summary {
   position: absolute;
@@ -678,4 +703,89 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   padding: 40px 24px;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* ── Submit review panel ─────────────────────────────────────────────────── */
+.submit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 480px;
+  max-width: 90vw;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.submit-panel h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.submit-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.submit-textarea:focus {
+  outline: none;
+  border-color: var(--link);
+}
+
+.submit-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.submit-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.submit-radio input {
+  margin-top: 3px;
+  accent-color: var(--link);
+}
+
+.submit-radio-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.submit-radio-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.submit-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
