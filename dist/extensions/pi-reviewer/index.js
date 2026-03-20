@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadContext } from "../../src/core/context.js";
-import { resolveDiff } from "../../src/core/diff-resolver.js";
+import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
@@ -19,14 +19,14 @@ function buildSSHDiffCommand(parsed) {
         return `git diff $(git merge-base ${parsed.branch} HEAD)`;
     return `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
 }
-function buildSSHSource(parsed) {
+export function buildSSHSource(parsed, cwd) {
     if (typeof parsed.pr === "number")
         return `PR #${parsed.pr}`;
     if (parsed.diff)
         return `git diff ${parsed.diff}`;
-    if (parsed.branch)
-        return `remote vs ${parsed.branch}`;
-    return "remote (ssh)";
+    const head = detectCurrentBranch(cwd);
+    const base = parsed.branch ?? detectOriginBase(cwd);
+    return `${head} vs ${base}`;
 }
 export default function (pi) {
     pi.registerCommand("review", {
@@ -53,7 +53,7 @@ export default function (pi) {
                 // ── SSH ───────────────────────────────────────────────────────────
                 if (parsed.ssh) {
                     const diffCommand = buildSSHDiffCommand(parsed);
-                    const source = buildSSHSource(parsed);
+                    const source = buildSSHSource(parsed, ctx.cwd);
                     const userPrompt = buildSSHUserPrompt(diffCommand);
                     if (!parsed.ui) {
                         // SSH-only: agent fetches diff, reviews, saves markdown

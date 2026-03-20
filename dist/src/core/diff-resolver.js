@@ -11,7 +11,7 @@ function ensureNonEmptyDiff(diff) {
         throw new Error(EMPTY_DIFF_ERROR);
     }
 }
-function detectCurrentBranch(cwd) {
+export function detectCurrentBranch(cwd) {
     try {
         return execSync("git rev-parse --abbrev-ref HEAD", {
             cwd,
@@ -27,7 +27,7 @@ function mergeBaseDiff(base, cwd) {
     const mergeBase = run(`git merge-base ${base} HEAD`, cwd).trim();
     return run(`git diff ${mergeBase}`, cwd);
 }
-function detectOriginBase(cwd) {
+export function detectOriginBase(cwd) {
     try {
         return execSync("git symbolic-ref refs/remotes/origin/HEAD --short", {
             cwd,

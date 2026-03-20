@@ -32,7 +32,7 @@ function ensureNonEmptyDiff(diff: string): void {
   }
 }
 
-function detectCurrentBranch(cwd: string): string {
+export function detectCurrentBranch(cwd: string): string {
   try {
     return execSync("git rev-parse --abbrev-ref HEAD", {
       cwd,
@@ -49,7 +49,7 @@ function mergeBaseDiff(base: string, cwd: string): string {
   return run(`git diff ${mergeBase}`, cwd);
 }
 
-function detectOriginBase(cwd: string): string {
+export function detectOriginBase(cwd: string): string {
   try {
     return execSync("git symbolic-ref refs/remotes/origin/HEAD --short", {
       cwd,
