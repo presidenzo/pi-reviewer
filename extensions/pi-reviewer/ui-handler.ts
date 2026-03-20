@@ -33,7 +33,7 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   if (action.type === "closed") return undefined;
 
   if (action.type === "save" || action.type === "save-and-send") {
-    const md = buildDecisionsMarkdown(result, action.decisions, source);
+    const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment);
     if (saveRemote) {
       saveRemote(md);
       notify("Review save requested → pi-review.md (remote)");
@@ -44,15 +44,16 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   }
 
   if (action.type === "send" || action.type === "save-and-send") {
-    return buildInjectionMessage(result, action.decisions, conventions);
+    return buildInjectionMessage(result, action.decisions, conventions, action.globalComment);
   }
 
   return undefined;
 }
 
-function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string): string {
+function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string): string {
   const date = new Date().toISOString().replace("T", " ").slice(0, 19);
   const lines = [`# Pi Review — ${source}`, ``, `> ${date}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
+  if (globalComment) lines.push("## Comment", "", globalComment, "");
 
   const accepted = decisions.filter((d) => d.decision !== "reject");
   if (accepted.length > 0) {
@@ -81,10 +82,11 @@ function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision
   return lines.join("\n");
 }
 
-function buildInjectionMessage(result: ReviewResult, decisions: CommentDecision[], conventions: string): string {
+function buildInjectionMessage(result: ReviewResult, decisions: CommentDecision[], conventions: string, globalComment?: string): string {
   const accepted = decisions.filter((d) => d.decision !== "reject");
 
   const parts: string[] = ["Here are the review findings to address. Please work through each one:", ""];
+  if (globalComment) parts.push(`**Overall comment:** ${globalComment}`, "");
 
   for (const d of accepted) {
     const c = result.comments[d.index];

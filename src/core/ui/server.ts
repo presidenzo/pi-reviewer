@@ -48,6 +48,7 @@ export interface CommentDecision {
 export interface UIAction {
   type: ActionType;
   decisions: CommentDecision[];
+  globalComment?: string;
 }
 
 export interface UIServerHandle {

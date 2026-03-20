@@ -892,6 +892,16 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   margin-top: 2px;
 }
 
+.submit-warning {
+  font-size: 12px;
+  color: var(--color-warn, #d97706);
+  background: color-mix(in srgb, var(--color-warn, #d97706) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warn, #d97706) 30%, transparent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
 .submit-footer {
   display: flex;
   justify-content: flex-end;

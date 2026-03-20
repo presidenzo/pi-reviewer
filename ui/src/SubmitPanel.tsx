@@ -80,6 +80,12 @@ export function SubmitPanel({ hasAccepted, onSubmit, onClose }: SubmitPanelProps
           </label>
         </div>
 
+        {!hasAccepted && (
+          <div className="submit-warning">
+            All comments were rejected — accept or discuss at least one to enable Send.
+          </div>
+        )}
+
         <div className="submit-footer">
           <button className="action-btn" onClick={onClose} type="button">Cancel</button>
           <button className="finish-btn" onClick={handleSubmit} type="button">

@@ -15,7 +15,7 @@ export async function handleUIReview(opts) {
     if (action.type === "closed")
         return undefined;
     if (action.type === "save" || action.type === "save-and-send") {
-        const md = buildDecisionsMarkdown(result, action.decisions, source);
+        const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment);
         if (saveRemote) {
             saveRemote(md);
             notify("Review save requested → pi-review.md (remote)");
@@ -26,13 +26,15 @@ export async function handleUIReview(opts) {
         }
     }
     if (action.type === "send" || action.type === "save-and-send") {
-        return buildInjectionMessage(result, action.decisions, conventions);
+        return buildInjectionMessage(result, action.decisions, conventions, action.globalComment);
     }
     return undefined;
 }
-function buildDecisionsMarkdown(result, decisions, source) {
+function buildDecisionsMarkdown(result, decisions, source, globalComment) {
     const date = new Date().toISOString().replace("T", " ").slice(0, 19);
     const lines = [`# Pi Review — ${source}`, ``, `> ${date}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
+    if (globalComment)
+        lines.push("## Comment", "", globalComment, "");
     const accepted = decisions.filter((d) => d.decision !== "reject");
     if (accepted.length > 0) {
         lines.push("## Review findings", "");
@@ -59,9 +61,11 @@ function buildDecisionsMarkdown(result, decisions, source) {
     }
     return lines.join("\n");
 }
-function buildInjectionMessage(result, decisions, conventions) {
+function buildInjectionMessage(result, decisions, conventions, globalComment) {
     const accepted = decisions.filter((d) => d.decision !== "reject");
     const parts = ["Here are the review findings to address. Please work through each one:", ""];
+    if (globalComment)
+        parts.push(`**Overall comment:** ${globalComment}`, "");
     for (const d of accepted) {
         const c = result.comments[d.index];
         if (!c)
