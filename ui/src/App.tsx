@@ -5,6 +5,7 @@ import { ReviewComment, UIData } from "./types";
 import { mockData } from "./mockData";
 import { FileTree, buildTree } from "./FileTree";
 import { ReviewHeader } from "./ReviewHeader";
+import { SummaryPanel } from "./SummaryPanel";
 
 declare global {
   interface Window {
@@ -26,8 +27,8 @@ export default function App() {
   const totalComments = result.comments.length;
 
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
-  const [summaryOpen, setSummaryOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"split" | "unified">("split");
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
@@ -106,10 +107,9 @@ export default function App() {
         ssh={ssh}
         theme={theme}
         onThemeToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-        summaryOpen={summaryOpen}
-        onSummaryToggle={() => setSummaryOpen((o) => !o)}
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen((o) => !o)}
+        onSummaryToggle={() => setSummaryOpen((o) => !o)}
         decidedCount={decidedCount}
         totalComments={totalComments}
         allDone={allDone}
@@ -143,6 +143,9 @@ export default function App() {
             />
           ))}
         </div>
+        {summaryOpen && (
+          <SummaryPanel summary={result.summary} onClose={() => setSummaryOpen(false)} />
+        )}
       </div>
     </>
   );

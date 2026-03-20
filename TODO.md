@@ -246,7 +246,8 @@ Config file already created for theme persistence. Future settings to add:
 - [x] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
 - [ ] **Click a line to add a note** — attach a personal annotation to any diff line, not just to agent-generated comments
 - [x] **Submit review panel** — replace Save / Send / Save & Send buttons with a single "Finish review" button; click opens a panel with a global comment textarea and 3 radio options (Send / Save / Save & Send); submit triggers the selected action with the comment injected
-- [ ] **Summary overview panel** — replace the inline summary dropdown with an ⓘ icon button; click opens a side panel (GitHub-style Overview) rendering the summary markdown; add a separator between the left icon cluster and the right action cluster in hdr2
+- [x] **Summary overview panel** — replace the inline summary dropdown with an ⓘ icon button; click opens a side panel (GitHub-style Overview) rendering the summary markdown; add a separator between the left icon cluster and the right action cluster in hdr2
+- [ ] **Layout settings panel** — replace the split/unified toggle icon with a ⚙ gear icon; click opens a dropdown panel (GitHub-style) with layout options: Unified / Split (radio), and future toggles (Minimize comments, Hide whitespace, Compact line height); extract as `LayoutPanel` component
 
 ### 10. Custom system prompt
 
