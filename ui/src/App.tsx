@@ -118,7 +118,7 @@ export default function App() {
         onAction={doAction}
         summary={result.summary}
         viewMode={viewMode}
-        onViewModeToggle={() => setViewMode((m) => m === "split" ? "unified" : "split")}
+        onViewModeChange={setViewMode}
       />
       <div id="layout">
         {sidebarOpen && (
