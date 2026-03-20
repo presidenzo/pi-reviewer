@@ -7,9 +7,10 @@ interface Props {
   decision?: string;
   discussText?: string;
   onDecide: (idx: number, decision: string, discussText: string) => void;
+  snapped?: boolean;
 }
 
-export function CommentCard({ comment, idx, decision, discussText = "", onDecide }: Props) {
+export function CommentCard({ comment, idx, decision, discussText = "", onDecide, snapped }: Props) {
   const sev = (comment.severity || "info").toLowerCase();
   const [pending, setPending] = useState(false);
   const [localText, setLocalText] = useState("");
@@ -64,6 +65,12 @@ export function CommentCard({ comment, idx, decision, discussText = "", onDecide
         >
           💬 Discuss
         </button>
+        {snapped && (
+          <span className="cc-snapped" title={`Agent referenced line ${comment.line} which is not shown in this diff`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><polyline points="5 12 12 5 19 12"/></svg>
+            not in diff
+          </span>
+        )}
       </div>
       {pending && (
         <div className="discuss-area">

@@ -21,35 +21,86 @@ interface Props {
   viewMode: "split" | "unified";
 }
 
-function rowComments(
+type PlacedComment = { comment: ReviewComment; idx: number; snapped: boolean };
+type PlacementMap = Map<number, PlacedComment[]>;
+
+function buildSplitPlacements(
   fc: Array<{ comment: ReviewComment; idx: number }>,
-  row: SplitRow
-): Array<{ comment: ReviewComment; idx: number }> {
-  return fc.filter(function (item) {
+  rows: SplitRow[]
+): PlacementMap {
+  const map: PlacementMap = new Map();
+  for (const item of fc) {
     const c = item.comment;
-    if (row.type === "hunk") return false;
-    if (row.type === "ctx") {
-      if (c.side === "LEFT") return row.oln === c.line;
-      return row.nln === c.line;
+    let exactIdx = -1;
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      if (row.type === "hunk") continue;
+      if (row.type === "ctx") {
+        if (c.side === "LEFT" && row.oln === c.line) { exactIdx = ri; break; }
+        if (c.side === "RIGHT" && row.nln === c.line) { exactIdx = ri; break; }
+      } else {
+        if (c.side === "LEFT" && row.del?.ln === c.line) { exactIdx = ri; break; }
+        if (c.side === "RIGHT" && row.add?.ln === c.line) { exactIdx = ri; break; }
+      }
     }
-    if (c.side === "LEFT") return row.del != null && row.del.ln === c.line;
-    return row.add != null && row.add.ln === c.line;
-  });
+    if (exactIdx !== -1) {
+      const arr = map.get(exactIdx) ?? []; arr.push({ ...item, snapped: false }); map.set(exactIdx, arr);
+    } else {
+      let bestIdx = -1, bestDist = Infinity;
+      for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri];
+        if (row.type === "hunk") continue;
+        const ln = c.side === "LEFT"
+          ? (row.type === "ctx" ? row.oln : row.del?.ln)
+          : (row.type === "ctx" ? row.nln : row.add?.ln);
+        if (ln === undefined) continue;
+        const dist = Math.abs(ln - c.line);
+        if (dist < bestDist) { bestDist = dist; bestIdx = ri; }
+      }
+      if (bestIdx !== -1) {
+        const arr = map.get(bestIdx) ?? []; arr.push({ ...item, snapped: true }); map.set(bestIdx, arr);
+      }
+    }
+  }
+  return map;
 }
 
-function rowCommentsUnified(
+function buildUnifiedPlacements(
   fc: Array<{ comment: ReviewComment; idx: number }>,
-  row: UnifiedRow
-): Array<{ comment: ReviewComment; idx: number }> {
-  return fc.filter(function (item) {
+  rows: UnifiedRow[]
+): PlacementMap {
+  const map: PlacementMap = new Map();
+  for (const item of fc) {
     const c = item.comment;
-    if (row.type === "hunk") return false;
-    if (row.type === "del") return c.side === "LEFT" && row.oln === c.line;
-    if (row.type === "add") return c.side === "RIGHT" && row.nln === c.line;
-    // ctx: match either side
-    if (c.side === "LEFT") return row.oln === c.line;
-    return row.nln === c.line;
-  });
+    let exactIdx = -1;
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      if (row.type === "hunk") continue;
+      if (row.type === "del" && c.side === "LEFT" && row.oln === c.line) { exactIdx = ri; break; }
+      if (row.type === "add" && c.side === "RIGHT" && row.nln === c.line) { exactIdx = ri; break; }
+      if (row.type === "ctx") {
+        if (c.side === "LEFT" && row.oln === c.line) { exactIdx = ri; break; }
+        if (c.side === "RIGHT" && row.nln === c.line) { exactIdx = ri; break; }
+      }
+    }
+    if (exactIdx !== -1) {
+      const arr = map.get(exactIdx) ?? []; arr.push({ ...item, snapped: false }); map.set(exactIdx, arr);
+    } else {
+      let bestIdx = -1, bestDist = Infinity;
+      for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri];
+        if (row.type === "hunk") continue;
+        const ln = c.side === "LEFT" ? row.oln : row.nln;
+        if (ln === undefined) continue;
+        const dist = Math.abs(ln - c.line);
+        if (dist < bestDist) { bestDist = dist; bestIdx = ri; }
+      }
+      if (bestIdx !== -1) {
+        const arr = map.get(bestIdx) ?? []; arr.push({ ...item, snapped: true }); map.set(bestIdx, arr);
+      }
+    }
+  }
+  return map;
 }
 
 function hl(content: string | undefined, lang: string | null): React.ReactNode {
@@ -84,6 +135,9 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
     <span className="cbadge">{activeRows.length} lines</span>
   ) : null;
 
+  const splitPlacements = useMemo(() => buildSplitPlacements(fc, allRows), [fc, allRows]);
+  const unifiedPlacements = useMemo(() => buildUnifiedPlacements(fc, allUnifiedRows), [fc, allUnifiedRows]);
+
   const trows: React.ReactNode[] = [];
   rows.forEach(function (row, ri) {
     if (row.type === "hunk") {
@@ -95,7 +149,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
       return;
     }
 
-    const comments = rowComments(fc, row);
+    const comments = splitPlacements.get(ri) ?? [];
     const hasCmt = comments.length > 0;
     const trCls = hasCmt ? "has-comment" : "";
 
@@ -134,6 +188,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
             decision={dec.decision}
             discussText={dec.discussText}
             onDecide={onDecide}
+            snapped={item.snapped}
           />
         );
         trows.push(
@@ -168,7 +223,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
       return;
     }
 
-    const comments = rowCommentsUnified(fc, row);
+    const comments = unifiedPlacements.get(ri) ?? [];
     const hasCmt = comments.length > 0;
     const trCls = hasCmt ? "has-comment" : "";
 
@@ -211,6 +266,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, vi
             decision={dec.decision}
             discussText={dec.discussText}
             onDecide={onDecide}
+            snapped={item.snapped}
           />
         );
         unifiedTrows.push(
