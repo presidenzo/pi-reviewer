@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { getModelLabel, buildReviewFilename } from "./review-filename.js";
+import { getModelLabel, buildReviewFilename, type ModelInfo } from "./review-filename.js";
 
 import { loadContext } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
@@ -36,6 +36,7 @@ export default function (pi: ExtensionAPI): void {
     description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --ui, --dry-run)",
     async handler(args, ctx) {
       const notify = ctx.ui.notify.bind(ctx.ui);
+      const model = ctx.model as ModelInfo;
       let stopLoader: () => void = () => {};
       try {
         const parsed = parseArgs(args);
@@ -77,7 +78,7 @@ export default function (pi: ExtensionAPI): void {
           if (warning) notify(warning, "warning");
           let sshSaveTriggered = false;
           const injectionMsg = await handleUIReview({
-            result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify, model: ctx.model as any,
+            result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify, model,
             saveRemote: (md, filename) => {
               sshSaveTriggered = true;
               pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/${filename}" (e.g. if the root is /some/path, write to /some/path/${filename}):\n\n${md}`);
@@ -114,16 +115,16 @@ export default function (pi: ExtensionAPI): void {
         const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity: parsed.minSeverity, stopLoader, notify });
 
         if (parsed.ui) {
-          const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, model: ctx.model as any });
+          const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, model });
           if (injectionMsg) pi.sendUserMessage(injectionMsg);
           return;
         }
 
         const formatted = formatForTerminal(result);
-        const model = ctx.model as any;
-        const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+        const now = new Date();
+        const date = now.toISOString().replace("T", " ").slice(0, 19);
         const modelLine = `**Model:** ${getModelLabel(model)}\n\n`;
-        const filename = buildReviewFilename(source);
+        const filename = buildReviewFilename(source, now);
         await writeFile(path.join(ctx.cwd, filename), `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
         notify(`Review saved → ${filename}`);
       } catch (error) {

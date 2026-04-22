@@ -39,8 +39,9 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   if (action.type === "closed") return undefined;
 
   if (action.type === "save" || action.type === "save-and-send") {
-    const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model);
-    const filename = buildReviewFilename(source);
+    const now = new Date();
+    const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model, now);
+    const filename = buildReviewFilename(source, now);
     if (saveRemote) {
       saveRemote(md, filename);
       notify(`Review save requested → ${filename} (remote)`);
@@ -67,8 +68,8 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
  * @param model - Optional model metadata; when provided the report header includes `provider/id` (or `"unknown"` if absent)
  * @returns The complete review report as a markdown-formatted string
  */
-function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { provider: string; id: string; name?: string }): string {
-  const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { provider: string; id: string; name?: string }, now: Date = new Date()): string {
+  const date = now.toISOString().replace("T", " ").slice(0, 19);
   const modelLabel = getModelLabel(model);
   const lines = [`# Pi Review — ${source}`, ``, `> ${date} · ${modelLabel}`, ``, `**Model:** ${modelLabel}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
   if (globalComment) lines.push("## Comment", "", globalComment, "");

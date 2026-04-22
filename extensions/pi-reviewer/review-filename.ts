@@ -14,8 +14,8 @@ export function getModelLabel(model: ModelInfo | undefined): string {
   return `${model.provider}/${model.id}`;
 }
 
-export function buildReviewFilename(source: string): string {
-  const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
+export function buildReviewFilename(source: string, now: Date = new Date()): string {
+  const ts = now.toISOString().replace(/[T:]/g, "-").slice(0, 19);
   const slug = source
     .replace(/[^a-zA-Z0-9]/g, "-")
     .replace(/-+/g, "-")
