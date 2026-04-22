@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { type ReviewResult } from "../../src/core/output.js";
 import { startUIServer, type CommentDecision } from "../../src/core/ui-server.js";
+import { getModelLabel, buildReviewFilename } from "./review-filename.js";
 
 export interface UIHandlerOptions {
   result: ReviewResult;
@@ -13,7 +14,7 @@ export interface UIHandlerOptions {
   notify: (msg: string, type?: "info" | "warning" | "error") => void;
   ssh?: boolean;
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
-  saveRemote?: (markdown: string) => void;
+  saveRemote?: (markdown: string, filename: string) => void;
   /** Current model info for review output. */
   model?: { provider: string; id: string; name?: string };
 }
@@ -39,11 +40,9 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
 
   if (action.type === "save" || action.type === "save-and-send") {
     const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model);
-    const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-    const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-    const filename = `pi-review-${ts}-${slug}.md`;
+    const filename = buildReviewFilename(source);
     if (saveRemote) {
-      saveRemote(md);
+      saveRemote(md, filename);
       notify(`Review save requested → ${filename} (remote)`);
     } else {
       await writeFile(path.join(cwd, filename), md, "utf-8");
@@ -56,17 +55,6 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   }
 
   return undefined;
-}
-
-/**
- * Produce a compact label for a model using its provider and id.
- *
- * @param model - Optional model metadata with `provider`, `id`, and optional `name`
- * @returns The label in the form `provider/id` if `model` is provided, otherwise `unknown`
- */
-function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
-  if (!model) return "unknown";
-  return `${model.provider}/${model.id}`;
 }
 
 /**

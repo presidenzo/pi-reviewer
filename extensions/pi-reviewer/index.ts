@@ -2,28 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-/**
- * Format a model identifier into a compact provider/id label.
- *
- * @param model - Object containing `provider` and `id` of a model; may be `undefined`
- * @returns The string `{provider}/{id}` when `model` is provided, or `"unknown"` when `model` is `undefined`
- */
-function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
-  if (!model) return "unknown";
-  return `${model.provider}/${model.id}`;
-}
-
-/**
- * Builds a timestamped, slugified markdown filename for a review based on the given source.
- *
- * @param source - Human-readable identifier for the diff or review source (e.g., branch name, PR number, or git range)
- * @returns The filename in the form `pi-review-<timestamp>-<slug>.md`, where `<timestamp>` is an ISO-like timestamp and `<slug>` is the source converted to a filesystem-friendly slug
- */
-function buildReviewFilename(source: string): string {
-  const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-  const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `pi-review-${ts}-${slug}.md`;
-}
+import { getModelLabel, buildReviewFilename } from "./review-filename.js";
 
 import { loadContext } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
@@ -99,10 +78,9 @@ export default function (pi: ExtensionAPI): void {
           let sshSaveTriggered = false;
           const injectionMsg = await handleUIReview({
             result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify, model: ctx.model as any,
-            saveRemote: (md) => {
+            saveRemote: (md, filename) => {
               sshSaveTriggered = true;
-              const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-              pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/pi-review-${ts}.md" (e.g. if the root is /some/path, write to /some/path/pi-review-${ts}.md):\n\n${md}`);
+              pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/${filename}" (e.g. if the root is /some/path, write to /some/path/${filename}):\n\n${md}`);
             },
           });
           if (injectionMsg) {
@@ -142,10 +120,11 @@ export default function (pi: ExtensionAPI): void {
         }
 
         const formatted = formatForTerminal(result);
+        const model = ctx.model as any;
         const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-        const modelLine = `**Model:** ${getModelLabel(ctx.model as any)}\n\n`;
+        const modelLine = `**Model:** ${getModelLabel(model)}\n\n`;
         const filename = buildReviewFilename(source);
-        await writeFile(path.join(ctx.cwd, filename), `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(ctx.model as any)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
+        await writeFile(path.join(ctx.cwd, filename), `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
         notify(`Review saved → ${filename}`);
       } catch (error) {
         stopLoader();
