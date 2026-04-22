@@ -15,14 +15,17 @@ export async function handleUIReview(opts) {
     if (action.type === "closed")
         return undefined;
     if (action.type === "save" || action.type === "save-and-send") {
-        const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment);
+        const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model);
+        const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
+        const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+        const filename = `pi-review-${ts}-${slug}.md`;
         if (saveRemote) {
             saveRemote(md);
-            notify("Review save requested → pi-review.md (remote)");
+            notify(`Review save requested → ${filename} (remote)`);
         }
         else {
-            await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
-            notify("Review saved → pi-review.md");
+            await writeFile(path.join(cwd, filename), md, "utf-8");
+            notify(`Review saved → ${filename}`);
         }
     }
     if (action.type === "send" || action.type === "save-and-send") {
@@ -30,9 +33,15 @@ export async function handleUIReview(opts) {
     }
     return undefined;
 }
-function buildDecisionsMarkdown(result, decisions, source, globalComment) {
+function getModelLabel(model) {
+    if (!model)
+        return "unknown";
+    return `${model.provider}/${model.id}`;
+}
+function buildDecisionsMarkdown(result, decisions, source, globalComment, model) {
     const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-    const lines = [`# Pi Review — ${source}`, ``, `> ${date}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
+    const modelLabel = getModelLabel(model);
+    const lines = [`# Pi Review — ${source}`, ``, `> ${date} · ${modelLabel}`, ``, `**Model:** ${modelLabel}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
     if (globalComment)
         lines.push("## Comment", "", globalComment, "");
     const accepted = decisions.filter((d) => d.decision !== "reject");

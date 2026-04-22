@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { type ReviewResult } from "../../src/core/output.js";
 import { startUIServer, type CommentDecision } from "../../src/core/ui-server.js";
+import { getModelLabel, buildReviewFilename } from "./review-filename.js";
 
 export interface UIHandlerOptions {
   result: ReviewResult;
@@ -13,13 +14,18 @@ export interface UIHandlerOptions {
   notify: (msg: string, type?: "info" | "warning" | "error") => void;
   ssh?: boolean;
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
-  saveRemote?: (markdown: string) => void;
+  saveRemote?: (markdown: string, filename: string) => void;
+  /** Current model info for review output. */
+  model?: { provider: string; id: string; name?: string };
 }
 
 /**
- * Returns the injection message to send to the agent, or undefined if none.
- * Save is handled internally; the caller is responsible for sending the injection
- * message at the right time (after any agent-side save has completed).
+ * Orchestrates the interactive review UI flow and produces an agent injection message when the user requests sending.
+ *
+ * Starts a UI server for the given review, notifies the caller of the UI URL, waits for the user's action, and closes the UI.
+ * If the user chooses to save, the function will either write a timestamped markdown file into `cwd` or invoke `saveRemote` if provided.
+ *
+ * @returns A plain-text injection message for the agent if the user selected "send" or "save-and-send", `undefined` otherwise.
  */
 export async function handleUIReview(opts: UIHandlerOptions): Promise<string | undefined> {
   const { result, diff, conventions, source, ssh, cwd, notify, saveRemote } = opts;
@@ -33,13 +39,15 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   if (action.type === "closed") return undefined;
 
   if (action.type === "save" || action.type === "save-and-send") {
-    const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment);
+    const now = new Date();
+    const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model, now);
+    const filename = buildReviewFilename(source, now);
     if (saveRemote) {
-      saveRemote(md);
-      notify("Review save requested → pi-review.md (remote)");
+      saveRemote(md, filename);
+      notify(`Review save requested → ${filename} (remote)`);
     } else {
-      await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
-      notify("Review saved → pi-review.md");
+      await writeFile(path.join(cwd, filename), md, "utf-8");
+      notify(`Review saved → ${filename}`);
     }
   }
 
@@ -50,9 +58,20 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   return undefined;
 }
 
-function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string): string {
-  const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-  const lines = [`# Pi Review — ${source}`, ``, `> ${date}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
+/**
+ * Create a markdown report summarizing review results and the decisions made for a given source.
+ *
+ * @param result - The review result containing a human summary and an array of comments referenced by decisions
+ * @param decisions - Decisions for each comment (accept, reject, discuss) that determine how each comment is presented
+ * @param source - The source identifier or path to include in the report title
+ * @param globalComment - Optional overall comment to include near the top of the report
+ * @param model - Optional model metadata; when provided the report header includes `provider/id` (or `"unknown"` if absent)
+ * @returns The complete review report as a markdown-formatted string
+ */
+function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { provider: string; id: string; name?: string }, now: Date = new Date()): string {
+  const date = now.toISOString().replace("T", " ").slice(0, 19);
+  const modelLabel = getModelLabel(model);
+  const lines = [`# Pi Review — ${source}`, ``, `> ${date} · ${modelLabel}`, ``, `**Model:** ${modelLabel}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
   if (globalComment) lines.push("## Comment", "", globalComment, "");
 
   const accepted = decisions.filter((d) => d.decision !== "reject");

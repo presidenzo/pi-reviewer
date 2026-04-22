@@ -13,7 +13,7 @@ export function runSSHReview(opts) {
             return;
         done = true;
         stopLoader();
-        notify("Review saved → pi-review.md");
+        notify("Review saved → pi-review-<timestamp>-<source>.md");
     });
     pi.sendUserMessage(userPrompt);
 }
