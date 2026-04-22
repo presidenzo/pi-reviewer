@@ -25,7 +25,7 @@ export function runSSHReview(opts: RunSSHOptions): void {
     if (done) return;
     done = true;
     stopLoader();
-    notify("Review saved → pi-review.md");
+    notify("Review saved → pi-review-<timestamp>-<source>.md");
   });
 
   pi.sendUserMessage(userPrompt);

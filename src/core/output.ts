@@ -241,7 +241,8 @@ export async function sendOutput(options: OutputOptions): Promise<void> {
   }
 
   const cwd = options.cwd ?? process.cwd();
-  const filePath = path.join(cwd, "pi-review.md");
+  const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
+  const filePath = path.join(cwd, `pi-review-${ts}.md`);
   await writeFile(filePath, formatForTerminal(result), "utf-8");
   console.log(`[pi-reviewer] review saved to ${filePath}`);
 }

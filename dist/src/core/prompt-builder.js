@@ -63,7 +63,7 @@ export function buildJSONSystemPrompt(context, minSeverity = "INFO") {
 }
 /**
  * Markdown system prompt — used by SSH-only mode.
- * Agent writes a human-readable markdown review and saves it to pi-review.md.
+ * Agent writes a human-readable markdown review and saves it to a timestamped pi-review file.
  */
 export function buildMarkdownSystemPrompt(minSeverity = "INFO") {
     return [
