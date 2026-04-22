@@ -3,7 +3,7 @@ import path from "node:path";
 function getModelLabel(model) {
     if (!model)
         return "unknown";
-    return `${model.providerId}/${model.modelId}`;
+    return `${model.provider}/${model.id}`;
 }
 function buildReviewFilename(source) {
     const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);

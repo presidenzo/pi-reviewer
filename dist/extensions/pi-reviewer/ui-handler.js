@@ -36,7 +36,7 @@ export async function handleUIReview(opts) {
 function getModelLabel(model) {
     if (!model)
         return "unknown";
-    return `${model.providerId}/${model.modelId}`;
+    return `${model.provider}/${model.id}`;
 }
 function buildDecisionsMarkdown(result, decisions, source, globalComment, model) {
     const date = new Date().toISOString().replace("T", " ").slice(0, 19);

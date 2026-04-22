@@ -2,9 +2,9 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-function getModelLabel(model: { providerId: string; modelId: string } | undefined): string {
+function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
   if (!model) return "unknown";
-  return `${model.providerId}/${model.modelId}`;
+  return `${model.provider}/${model.id}`;
 }
 
 function buildReviewFilename(source: string): string {

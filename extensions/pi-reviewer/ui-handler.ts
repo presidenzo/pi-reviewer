@@ -15,7 +15,7 @@ export interface UIHandlerOptions {
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
   saveRemote?: (markdown: string) => void;
   /** Current model info for review output. */
-  model?: { providerId: string; modelId: string };
+  model?: { provider: string; id: string; name?: string };
 }
 
 /**
@@ -55,12 +55,12 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   return undefined;
 }
 
-function getModelLabel(model: { providerId: string; modelId: string } | undefined): string {
+function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
   if (!model) return "unknown";
-  return `${model.providerId}/${model.modelId}`;
+  return `${model.provider}/${model.id}`;
 }
 
-function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { providerId: string; modelId: string }): string {
+function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { provider: string; id: string; name?: string }): string {
   const date = new Date().toISOString().replace("T", " ").slice(0, 19);
   const modelLabel = getModelLabel(model);
   const lines = [`# Pi Review — ${source}`, ``, `> ${date} · ${modelLabel}`, ``, `**Model:** ${modelLabel}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
