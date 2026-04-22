@@ -2,11 +2,23 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
+/**
+ * Format a model identifier into a compact provider/id label.
+ *
+ * @param model - Object containing `provider` and `id` of a model; may be `undefined`
+ * @returns The string `{provider}/{id}` when `model` is provided, or `"unknown"` when `model` is `undefined`
+ */
 function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
   if (!model) return "unknown";
   return `${model.provider}/${model.id}`;
 }
 
+/**
+ * Builds a timestamped, slugified markdown filename for a review based on the given source.
+ *
+ * @param source - Human-readable identifier for the diff or review source (e.g., branch name, PR number, or git range)
+ * @returns The filename in the form `pi-review-<timestamp>-<slug>.md`, where `<timestamp>` is an ISO-like timestamp and `<slug>` is the source converted to a filesystem-friendly slug
+ */
 function buildReviewFilename(source: string): string {
   const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
   const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");

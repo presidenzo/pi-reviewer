@@ -19,9 +19,12 @@ export interface UIHandlerOptions {
 }
 
 /**
- * Returns the injection message to send to the agent, or undefined if none.
- * Save is handled internally; the caller is responsible for sending the injection
- * message at the right time (after any agent-side save has completed).
+ * Orchestrates the interactive review UI flow and produces an agent injection message when the user requests sending.
+ *
+ * Starts a UI server for the given review, notifies the caller of the UI URL, waits for the user's action, and closes the UI.
+ * If the user chooses to save, the function will either write a timestamped markdown file into `cwd` or invoke `saveRemote` if provided.
+ *
+ * @returns A plain-text injection message for the agent if the user selected "send" or "save-and-send", `undefined` otherwise.
  */
 export async function handleUIReview(opts: UIHandlerOptions): Promise<string | undefined> {
   const { result, diff, conventions, source, ssh, cwd, notify, saveRemote } = opts;
@@ -55,11 +58,27 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
   return undefined;
 }
 
+/**
+ * Produce a compact label for a model using its provider and id.
+ *
+ * @param model - Optional model metadata with `provider`, `id`, and optional `name`
+ * @returns The label in the form `provider/id` if `model` is provided, otherwise `unknown`
+ */
 function getModelLabel(model: { provider: string; id: string; name?: string } | undefined): string {
   if (!model) return "unknown";
   return `${model.provider}/${model.id}`;
 }
 
+/**
+ * Create a markdown report summarizing review results and the decisions made for a given source.
+ *
+ * @param result - The review result containing a human summary and an array of comments referenced by decisions
+ * @param decisions - Decisions for each comment (accept, reject, discuss) that determine how each comment is presented
+ * @param source - The source identifier or path to include in the report title
+ * @param globalComment - Optional overall comment to include near the top of the report
+ * @param model - Optional model metadata; when provided the report header includes `provider/id` (or `"unknown"` if absent)
+ * @returns The complete review report as a markdown-formatted string
+ */
 function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string, globalComment?: string, model?: { provider: string; id: string; name?: string }): string {
   const date = new Date().toISOString().replace("T", " ").slice(0, 19);
   const modelLabel = getModelLabel(model);
