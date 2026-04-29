@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -340,7 +340,7 @@ describe("sendOutput", () => {
     ).rejects.toThrow("Failed to post GitHub comment: 403 Forbidden");
   });
 
-  it("writes formatted review to pi-review.md for file target", async () => {
+  it("writes formatted review to timestamped pi-review file for file target", async () => {
     const dir = await createTempDir();
 
     await sendOutput({
@@ -354,11 +354,15 @@ describe("sendOutput", () => {
       cwd: dir,
     });
 
-    const content = await readFile(path.join(dir, "pi-review.md"), "utf-8");
+    const files = await readdir(dir);
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatch(/^pi-review-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.md$/);
+
+    const content = await readFile(path.join(dir, files[0]), "utf-8");
     expect(content).toBe(
       "== Review Summary ==\nPlease address comments\n\n== Inline Comments ==\n🟡 src/a.ts:7 (RIGHT)\n🟡 Handle undefined"
     );
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("pi-review.md"));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining(files[0]));
   });
 
   it("filters comments by minSeverity when posting", async () => {

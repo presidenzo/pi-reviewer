@@ -31,7 +31,7 @@ export function readViewMode() {
 // The UI sends an explicit pagehide signal on tab close, so this only
 // triggers on browser crash or network drop. 45s = one missed ping + grace.
 const HEARTBEAT_MS = 45_000;
-export async function startUIServer(result, diff, source, ssh) {
+export async function startUIServer(result, diff, source, ssh, autoOpen = true) {
     const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
     let resolveAction;
     const actionPromise = new Promise((r) => { resolveAction = r; });
@@ -110,7 +110,8 @@ export async function startUIServer(result, diff, source, ssh) {
     const port = await listenOnRandomPort(server);
     const url = "http://localhost:" + port;
     resetHeartbeat();
-    openBrowser(url);
+    if (autoOpen)
+        openBrowser(url);
     return {
         url,
         waitForAction: () => actionPromise,

@@ -2,7 +2,7 @@ import http from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReviewResult } from "../../../src/core/output.js";
 import { buildHTML } from "../../../src/core/ui/template.js";
-import { startUIServer, openBrowser, type UIAction } from "../../../src/core/ui/server.js";
+import { startUIServer, type UIAction } from "../../../src/core/ui/server.js";
 
 const RESULT: ReviewResult = {
   summary: "Looks good overall.",
@@ -82,17 +82,14 @@ function post(url: string, body: unknown): Promise<{ status: number }> {
 }
 
 describe("startUIServer", () => {
-  // Prevent actual browser from opening during tests
-  vi.spyOn({ openBrowser }, "openBrowser").mockImplementation(() => {});
-
   it("starts a server and returns a localhost URL", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     expect(handle.url).toMatch(/^http:\/\/localhost:\d+$/);
     await handle.close();
   });
 
   it("serves the HTML page on GET /", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     const { status, body } = await get(handle.url);
     expect(status).toBe(200);
     expect(body).toContain("Pi Review");
@@ -101,27 +98,27 @@ describe("startUIServer", () => {
   });
 
   it("responds on a port different from the previous instance", async () => {
-    const a = await startUIServer(RESULT, DIFF);
-    const b = await startUIServer(RESULT, DIFF);
+    const a = await startUIServer(RESULT, DIFF, undefined, undefined, false);
+    const b = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     expect(a.url).not.toBe(b.url);
     await Promise.all([a.close(), b.close()]);
   });
 
   it("close() shuts the server down so subsequent requests fail", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     await handle.close();
     await expect(get(handle.url)).rejects.toThrow();
   });
 
   it("GET /ping returns 204", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     const { status } = await get(handle.url + "/ping");
     expect(status).toBe(204);
     await handle.close();
   });
 
   it("POST /action resolves waitForAction with the payload", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     const payload: UIAction = {
       type: "save",
       decisions: [{ index: 0, decision: "accept" }, { index: 1, decision: "reject" }],
@@ -134,7 +131,7 @@ describe("startUIServer", () => {
   });
 
   it("POST /action with invalid JSON returns 400", async () => {
-    const handle = await startUIServer(RESULT, DIFF);
+    const handle = await startUIServer(RESULT, DIFF, undefined, undefined, false);
     const { status } = await new Promise<{ status: number }>((resolve, reject) => {
       const req = http.request(handle.url + "/action", { method: "POST" }, (res) => {
         res.resume();

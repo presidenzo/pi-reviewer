@@ -1,15 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-function getModelLabel(model) {
-    if (!model)
-        return "unknown";
-    return `${model.provider}/${model.id}`;
-}
-function buildReviewFilename(source) {
-    const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-    const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-    return `pi-review-${ts}-${slug}.md`;
-}
+import { getModelLabel, buildReviewFilename, isModelInfo } from "./review-filename.js";
 import { loadContext } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
@@ -43,6 +34,7 @@ export default function (pi) {
         description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --ui, --dry-run)",
         async handler(args, ctx) {
             const notify = ctx.ui.notify.bind(ctx.ui);
+            const model = isModelInfo(ctx.model) ? ctx.model : undefined;
             let stopLoader = () => { };
             try {
                 const parsed = parseArgs(args);
@@ -83,11 +75,10 @@ export default function (pi) {
                         notify(warning, "warning");
                     let sshSaveTriggered = false;
                     const injectionMsg = await handleUIReview({
-                        result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify, model: ctx.model,
-                        saveRemote: (md) => {
+                        result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify, model,
+                        saveRemote: (md, filename) => {
                             sshSaveTriggered = true;
-                            const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-                            pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/pi-review-${ts}.md" (e.g. if the root is /some/path, write to /some/path/pi-review-${ts}.md):\n\n${md}`);
+                            pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/${filename}" (e.g. if the root is /some/path, write to /some/path/${filename}):\n\n${md}`);
                         },
                     });
                     if (injectionMsg) {
@@ -122,17 +113,19 @@ export default function (pi) {
                 stopLoader = setReviewFooter(ctx, source);
                 const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity: parsed.minSeverity, stopLoader, notify });
                 if (parsed.ui) {
-                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, model: ctx.model });
+                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, model });
                     if (injectionMsg)
                         pi.sendUserMessage(injectionMsg);
                     return;
                 }
                 const formatted = formatForTerminal(result);
-                const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-                const modelLine = `**Model:** ${getModelLabel(ctx.model)}\n\n`;
-                const filename = buildReviewFilename(source);
-                await writeFile(path.join(ctx.cwd, filename), `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(ctx.model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
-                notify(`Review saved → ${filename}`);
+                const now = new Date();
+                const date = now.toISOString().replace("T", " ").slice(0, 19);
+                const modelLine = `**Model:** ${getModelLabel(model)}\n\n`;
+                const filename = buildReviewFilename(source, now);
+                const filePath = path.join(ctx.cwd, filename);
+                await writeFile(filePath, `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
+                notify(`Review saved → ${filePath}`);
             }
             catch (error) {
                 stopLoader();

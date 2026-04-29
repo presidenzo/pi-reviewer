@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { getModelLabel, buildReviewFilename, type ModelInfo } from "./review-filename.js";
+import { getModelLabel, buildReviewFilename, isModelInfo } from "./review-filename.js";
 
 import { loadContext } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
@@ -36,7 +36,7 @@ export default function (pi: ExtensionAPI): void {
     description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --ui, --dry-run)",
     async handler(args, ctx) {
       const notify = ctx.ui.notify.bind(ctx.ui);
-      const model = ctx.model as ModelInfo;
+      const model = isModelInfo(ctx.model) ? ctx.model : undefined;
       let stopLoader: () => void = () => {};
       try {
         const parsed = parseArgs(args);
@@ -125,8 +125,9 @@ export default function (pi: ExtensionAPI): void {
         const date = now.toISOString().replace("T", " ").slice(0, 19);
         const modelLine = `**Model:** ${getModelLabel(model)}\n\n`;
         const filename = buildReviewFilename(source, now);
-        await writeFile(path.join(ctx.cwd, filename), `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
-        notify(`Review saved → ${filename}`);
+        const filePath = path.join(ctx.cwd, filename);
+        await writeFile(filePath, `# Pi Review — ${source}\n\n> ${date} · ${getModelLabel(model)}\n\n${modelLine}---\n\n${formatted}\n`, "utf-8");
+        notify(`Review saved → ${filePath}`);
       } catch (error) {
         stopLoader();
         notify(`Review failed: ${error instanceof Error ? error.message : String(error)}`, "error");

@@ -44,10 +44,11 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<string | u
     const filename = buildReviewFilename(source, now);
     if (saveRemote) {
       saveRemote(md, filename);
-      notify(`Review save requested → ${filename} (remote)`);
+      notify(`Review save requested → <remote-project-root>/${filename}`);
     } else {
-      await writeFile(path.join(cwd, filename), md, "utf-8");
-      notify(`Review saved → ${filename}`);
+      const filePath = path.join(cwd, filename);
+      await writeFile(filePath, md, "utf-8");
+      notify(`Review saved → ${filePath}`);
     }
   }
 

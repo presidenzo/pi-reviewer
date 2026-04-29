@@ -1,10 +1,14 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { startUIServer } from "../../src/core/ui-server.js";
+import { getModelLabel, buildReviewFilename } from "./review-filename.js";
 /**
- * Returns the injection message to send to the agent, or undefined if none.
- * Save is handled internally; the caller is responsible for sending the injection
- * message at the right time (after any agent-side save has completed).
+ * Orchestrates the interactive review UI flow and produces an agent injection message when the user requests sending.
+ *
+ * Starts a UI server for the given review, notifies the caller of the UI URL, waits for the user's action, and closes the UI.
+ * If the user chooses to save, the function will either write a timestamped markdown file into `cwd` or invoke `saveRemote` if provided.
+ *
+ * @returns A plain-text injection message for the agent if the user selected "send" or "save-and-send", `undefined` otherwise.
  */
 export async function handleUIReview(opts) {
     const { result, diff, conventions, source, ssh, cwd, notify, saveRemote } = opts;
@@ -15,17 +19,17 @@ export async function handleUIReview(opts) {
     if (action.type === "closed")
         return undefined;
     if (action.type === "save" || action.type === "save-and-send") {
-        const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model);
-        const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
-        const slug = source.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-        const filename = `pi-review-${ts}-${slug}.md`;
+        const now = new Date();
+        const md = buildDecisionsMarkdown(result, action.decisions, source, action.globalComment, opts.model, now);
+        const filename = buildReviewFilename(source, now);
         if (saveRemote) {
-            saveRemote(md);
-            notify(`Review save requested → ${filename} (remote)`);
+            saveRemote(md, filename);
+            notify(`Review save requested → <remote-project-root>/${filename}`);
         }
         else {
-            await writeFile(path.join(cwd, filename), md, "utf-8");
-            notify(`Review saved → ${filename}`);
+            const filePath = path.join(cwd, filename);
+            await writeFile(filePath, md, "utf-8");
+            notify(`Review saved → ${filePath}`);
         }
     }
     if (action.type === "send" || action.type === "save-and-send") {
@@ -33,13 +37,18 @@ export async function handleUIReview(opts) {
     }
     return undefined;
 }
-function getModelLabel(model) {
-    if (!model)
-        return "unknown";
-    return `${model.provider}/${model.id}`;
-}
-function buildDecisionsMarkdown(result, decisions, source, globalComment, model) {
-    const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+/**
+ * Create a markdown report summarizing review results and the decisions made for a given source.
+ *
+ * @param result - The review result containing a human summary and an array of comments referenced by decisions
+ * @param decisions - Decisions for each comment (accept, reject, discuss) that determine how each comment is presented
+ * @param source - The source identifier or path to include in the report title
+ * @param globalComment - Optional overall comment to include near the top of the report
+ * @param model - Optional model metadata; when provided the report header includes `provider/id` (or `"unknown"` if absent)
+ * @returns The complete review report as a markdown-formatted string
+ */
+function buildDecisionsMarkdown(result, decisions, source, globalComment, model, now = new Date()) {
+    const date = now.toISOString().replace("T", " ").slice(0, 19);
     const modelLabel = getModelLabel(model);
     const lines = [`# Pi Review — ${source}`, ``, `> ${date} · ${modelLabel}`, ``, `**Model:** ${modelLabel}`, ``, `---`, ``, `## Summary`, ``, result.summary, ``];
     if (globalComment)

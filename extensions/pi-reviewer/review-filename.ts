@@ -9,6 +9,17 @@ export interface ModelInfo {
   name?: string;
 }
 
+export function isModelInfo(model: unknown): model is ModelInfo {
+  return (
+    typeof model === "object" &&
+    model !== null &&
+    "provider" in model &&
+    typeof model.provider === "string" &&
+    "id" in model &&
+    typeof model.id === "string"
+  );
+}
+
 export function getModelLabel(model: ModelInfo | undefined): string {
   if (!model) return "unknown";
   return `${model.provider}/${model.id}`;

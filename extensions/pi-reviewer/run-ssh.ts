@@ -35,7 +35,7 @@ export function runSSHReview(opts: RunSSHOptions): void {
     if (done) return;
     done = true;
     stopLoader();
-    notify("Review saved → pi-review.md");
+    notify("Review saved → <remote-project-root>/pi-review.md");
   });
 
   pi.sendUserMessage(userPrompt);
