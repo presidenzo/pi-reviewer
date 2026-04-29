@@ -1,5 +1,15 @@
 import { parseAgentResponse } from "../../src/core/output.js";
 import { extractLastAssistantText } from "./events.js";
+/**
+ * Starts an SSH review run by registering PI event handlers and sending the user prompt to the agent.
+ *
+ * @param opts - Configuration for the review run
+ * @param opts.systemPrompt - System-level prompt supplied to the agent before it starts
+ * @param opts.userPrompt - The user-facing message sent to the agent to trigger the review
+ * @param opts.pi - The ExtensionAPI instance used to communicate with the agent
+ * @param opts.stopLoader - Callback invoked to stop any progress/loading UI when the run completes
+ * @param opts.notify - Notification callback used to report a saved review (receives the message string)
+ */
 export function runSSHReview(opts) {
     const { systemPrompt, userPrompt, pi, stopLoader, notify } = opts;
     let done = false;
@@ -13,7 +23,7 @@ export function runSSHReview(opts) {
             return;
         done = true;
         stopLoader();
-        notify("Review saved → pi-review.md");
+        notify("Review saved → <remote-project-root>/pi-review.md");
     });
     pi.sendUserMessage(userPrompt);
 }

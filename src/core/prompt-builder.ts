@@ -75,8 +75,15 @@ export function buildJSONSystemPrompt(
 }
 
 /**
- * Markdown system prompt — used by SSH-only mode.
- * Agent writes a human-readable markdown review and saves it to pi-review.md.
+ * Constructs a Markdown-formatted system prompt for SSH-only code review agents.
+ *
+ * The prompt instructs the agent to produce a human-readable Markdown review containing
+ * a summary section with bullet points for each issue and an inline comments section
+ * listing file, line, and comment for each finding. It also instructs the agent to
+ * save the final review to `pi-review.md` in the project root using the Write tool.
+ *
+ * @param minSeverity - The minimum severity tier to include in the review (defaults to "INFO")
+ * @returns The full system prompt as a single string
  */
 export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO"): string {
   return [

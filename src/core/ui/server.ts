@@ -62,7 +62,7 @@ export interface UIServerHandle {
 // triggers on browser crash or network drop. 45s = one missed ping + grace.
 const HEARTBEAT_MS = 45_000;
 
-export async function startUIServer(result: ReviewResult, diff: string, source?: string, ssh?: boolean): Promise<UIServerHandle> {
+export async function startUIServer(result: ReviewResult, diff: string, source?: string, ssh?: boolean, autoOpen = true): Promise<UIServerHandle> {
   const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
 
   let resolveAction!: (a: UIAction) => void;
@@ -138,7 +138,7 @@ export async function startUIServer(result: ReviewResult, diff: string, source?:
   const port = await listenOnRandomPort(server);
   const url = "http://localhost:" + port;
   resetHeartbeat();
-  openBrowser(url);
+  if (autoOpen) openBrowser(url);
 
   return {
     url,

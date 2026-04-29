@@ -164,6 +164,20 @@ export function formatForTerminal(result: ReviewResult): string {
   return lines.join("\n");
 }
 
+/**
+ * Send a parsed review to the configured output target.
+ *
+ * Sends formatted review content (derived from `options.content`) to one of:
+ * - the terminal,
+ * - a GitHub PR (inline review or issue comment), or
+ * - a timestamped markdown file on disk.
+ *
+ * @param options - Configuration that specifies the review content, destination (`target`), optional minimum severity filter, and any GitHub or file settings required for the selected target.
+ * @throws Error - If `target` is `"comment"` and `githubToken` is not provided.
+ * @throws Error - If `target` is `"comment"` and `prNumber` is not a number.
+ * @throws Error - If `target` is `"comment"` and `repo` (owner/repo) is not provided.
+ * @throws Error - If posting the fallback GitHub issue comment fails (includes HTTP status and response body when available).
+ */
 export async function sendOutput(options: OutputOptions): Promise<void> {
   const result = parseAgentResponse(options.content, options.minSeverity);
 
@@ -241,7 +255,8 @@ export async function sendOutput(options: OutputOptions): Promise<void> {
   }
 
   const cwd = options.cwd ?? process.cwd();
-  const filePath = path.join(cwd, "pi-review.md");
+  const ts = new Date().toISOString().replace(/[T:]/g, "-").slice(0, 19);
+  const filePath = path.join(cwd, `pi-review-${ts}.md`);
   await writeFile(filePath, formatForTerminal(result), "utf-8");
   console.log(`[pi-reviewer] review saved to ${filePath}`);
 }
